@@ -92,29 +92,56 @@ export default function Chat() {
           <button
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg disabled:opacity-50"
             disabled={isLoading || !state.character}
-            onClick={() => {
+            onClick={async () => {
               const selectedCharacter = characters.find(c => c.value === state.character);
-              const prompt = selectedCharacter.isCustom
+              const storyPrompt = selectedCharacter.isCustom
                 ? `Generate a story with a character named ${selectedCharacter.value}. This character is described as: ${selectedCharacter.description}. Their personality is: ${selectedCharacter.personality}`
                 : `Generate a story with the main character ${state.character}`;
               
-              append({
+              // First, generate the story
+              await append({
                 role: "user",
-                content: prompt,
+                content: storyPrompt,
               });
+
+              // Wait for the story response
+              const story = messages[messages.length - 1]?.content;
+
+              // Then, request a character summary
+              if (story && !story.startsWith("Generate")) {
+                await append({
+                  role: "user",
+                  content: `Based on the story above, provide a brief summary of ${state.character}'s role and character development in the narrative.`,
+                });
+              }
             }}
           >
             Generate Story
           </button>
 
+          {/* Story Container */}
           <div
             hidden={
               messages.length === 0 ||
-              messages[messages.length - 1]?.content.startsWith("Generate")
+              messages[messages.length - 2]?.content.startsWith("Generate")
             }
-            className="bg-opacity-25 bg-gray-700 rounded-lg p-6 w-full max-w-2xl text-lg"
+            className="bg-opacity-25 bg-gray-700 rounded-lg p-6 text-lg"
           >
-            {messages[messages.length - 1]?.content}
+            <h3 className="text-2xl font-semibold mb-4 text-white">Generated Story</h3>
+            <div className="text-white">
+              {messages[messages.length - 1]?.content}
+            </div>
+          </div>
+
+          {/* Character Summary Container */}
+          <div
+            hidden={messages.length < 2}
+            className="bg-opacity-25 bg-gray-700 rounded-lg p-6"
+          >
+            <h3 className="text-2xl font-semibold mb-4 text-white">Main Character Summary</h3>
+            <div className="text-lg text-white">
+              {messages[messages.length - 2]?.content}
+            </div>
           </div>
         </div>
       </div>
